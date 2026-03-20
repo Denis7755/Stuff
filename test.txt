@@ -1,0 +1,10 @@
+Test | Asel | Bsel | B-source | Fsel  | Value | WE | WS | Expected R0 | Expected R1 | Rationale
+
+1    | X    | X    | X        | PassB | X     | 0  | X  | no change   | no change   | No change when write enable = 0
+2    | X    | X    | 0        | PassB | 0011  | 1  | 0  | 0011        | unchanged   | Write external value into R0
+3    | X    | X    | 0        | PassB | 0101  | 1  | 1  | 0011        | 0101        | Write external value into R1
+4    | X    | X    | 0        | PassB | 1110  | 1  | 0  | 1110        | 0101        | Verify that WS = 0 selects R0 as the destination register
+5    | X    | X    | 0        | PassB | 1001  | 1  | 1  | 1110        | 1001        | Verify that WS = 1 selects R1 as the destination register
+6    | X    | 0    | 1        | PassB | 0000  | 1  | 1  | 1110        | 1110        | Verify that Bsel = 0 selects R0 onto the register-file B output
+7    | X    | 1    | 1        | PassB | 0000  | 1  | 0  | 1110        | 1110        | Verify that Bsel = 1 selects R1 onto the register-file B output
+8    | X    | 1    | 0        | PassB | 0110  | 1  | 0  | 0110        | 1110        | Verify that B-source = 0 makes ALU B come from the external value
