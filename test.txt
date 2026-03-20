@@ -1,10 +1,10 @@
-Test | Asel | Bsel | B-source | Fsel  | Value | WE | WS | Expected R0 | Expected R1 | Rationale
+Test | Asel | Bsel | B-source |            Fsel        | Value | WE | WS | Expected R0 | Expected R1 |          Rationale
 
-1    | X    | X    | X        | PassB | X     | 0  | X  | no change   | no change   | No change when write enable = 0
-2    | X    | X    | 0        | PassB | 0011  | 1  | 0  | 0011        | no change   | Writes value into R0
-3    | X    | X    | 0        | PassB | 0101  | 1  | 1  | 0011        | 0101        | Writes value into R1
-4    | X    | X    | 0        | PassB | 1110  | 1  | 0  | 1110        | 0101        | When WS = 0 then R0 is the destination
-5    | X    | X    | 0        | PassB | 1001  | 1  | 1  | 1110        | 1001        | When WS = 1 then R1 is the destination
-6    | X    | 0    | 1        | PassB | 0000  | 1  | 1  | 1110        | 1110        | When Bsel = 0 it selects R0 onto the register-file B output
-7    | X    | 1    | 1        | PassB | 0000  | 1  | 0  | 1110        | 1110        | When Bsel = 1 it selects R1 onto the register-file B output
-8    | X    | 1    | 0        | PassB | 0110  | 1  | 0  | 0110        | 1110        | When B-source = 0 then R0 will be the value
+1    | X    | X    | X        | PassB (F1 = 0, F0 = 0) | X     | 0  | X  | no change   | no change   | No change when write enable = 0
+2    | X    | X    | 0        | PassB (F1 = 1, F0 = 0) | 0011  | 1  | 0  | 0011        | no change   | Writes the value into R0
+3    | X    | X    | 0        | PassB (F1 = 1, F0 = 0) | 0101  | 1  | 1  | 0011        | 0101        | Writes the value into R1
+4    | X    | X    | 0        | PassB (F1 = 1, F0 = 0) | 1110  | 1  | 0  | 1110        | 0101        | When WS = 0 it writes into R0
+5    | X    | X    | 0        | PassB (F1 = 1, F0 = 1) | 1001  | 1  | 1  | 1110        | 1001        | When WS = 1 it writes into R1
+6    | X    | 0    | 1        | PassB (F1 = 1, F0 = 1) | 0000  | 1  | 1  | 1110        | 1110        | When Bsel = 0 it picks R0
+7    | X    | 1    | 1        | PassB (F1 = 1, F0 = 1) | 0000  | 1  | 0  | 1110        | 1110        | When Bsel = 1 it picks R1
+8    | X    | 1    | 0        | PassB (F1 = 1, F0 = 0) | 0110  | 1  | 0  | 0110        | 1110        | When B-source = 0 it uses the value input
