@@ -1,0 +1,598 @@
+## 1. Encryption program — `encrypt.py`
+
+```python
+from Cryptodome.Cipher import AES
+from Cryptodome.Util.Padding import pad
+
+# The message we want to encrypt
+PLAINTEXT = b"CS468 homework test message"
+
+# Ask how many bits of the key should be variable
+bits = int(input("How many variable bits? "))
+
+# Make the variable bits all 1s
+key_number = (1 << bits) - 1
+
+# Convert the number into a 128-bit AES key
+key = key_number.to_bytes(16, byteorder="big")
+
+# Create the AES encryption object
+cipher = AES.new(key, AES.MODE_ECB)
+
+# Add padding so AES can encrypt the message
+padded_message = pad(PLAINTEXT, AES.block_size)
+
+# Encrypt the message
+ciphertext = cipher.encrypt(padded_message)
+
+# Save the encrypted message into a file
+with open("ciphertext.bin", "wb") as file:
+    file.write(ciphertext)
+
+print()
+print("Encryption complete.")
+print("Plaintext:", PLAINTEXT.decode())
+print("Variable bits:", bits)
+print("AES key:", key.hex())
+print("Ciphertext saved as ciphertext.bin")
+```
+
+### What goes into the encryption program
+
+The first two lines:
+
+```python
+from Cryptodome.Cipher import AES
+from Cryptodome.Util.Padding import pad
+```
+
+import AES from PyCryptodome and the padding function.
+
+AES encrypts data in blocks, so `pad` makes the message the correct size.
+
+---
+
+This:
+
+```python
+PLAINTEXT = b"CS468 homework test message"
+```
+
+is the message we are encrypting.
+
+The `b` means the message is stored as **bytes**, which AES needs.
+
+---
+
+This:
+
+```python
+bits = int(input("How many variable bits? "))
+```
+
+lets us choose:
+
+```text
+10
+15
+20
+25
+```
+
+without changing the program every time.
+
+---
+
+This is one of the most important lines:
+
+```python
+key_number = (1 << bits) - 1
+```
+
+It creates a value where the variable bits are all `1`.
+
+For example, with 10 bits:
+
+```text
+1111111111
+```
+
+That is important because the assignment says to set the unknown 10 bits to all 1s before brute-forcing them.
+
+---
+
+This:
+
+```python
+key = key_number.to_bytes(16, byteorder="big")
+```
+
+turns our number into a **16-byte key**.
+
+Why 16 bytes?
+
+Because:
+
+```text
+16 bytes × 8 bits = 128 bits
+```
+
+so it gives us an **AES-128 key**.
+
+---
+
+This:
+
+```python
+cipher = AES.new(key, AES.MODE_ECB)
+```
+
+creates the AES cipher using our key.
+
+We use ECB here because it keeps this assignment simple and lets us focus on testing the key space rather than adding extra features.
+
+---
+
+This:
+
+```python
+padded_message = pad(PLAINTEXT, AES.block_size)
+```
+
+makes the message fit AES's required block size.
+
+Then:
+
+```python
+ciphertext = cipher.encrypt(padded_message)
+```
+
+actually encrypts it.
+
+---
+
+Finally:
+
+```python
+with open("ciphertext.bin", "wb") as file:
+    file.write(ciphertext)
+```
+
+saves the encrypted message into:
+
+```text
+ciphertext.bin
+```
+
+The decryption program will read this same file.
+
+---
+
+# 2. Decryption program — `decrypt.py`
+
+```python
+from Cryptodome.Cipher import AES
+from Cryptodome.Util.Padding import pad, unpad
+import time
+
+PLAINTEXT = b"CS468 homework test message"
+
+print("1 - Decrypt using a known key")
+print("2 - Brute-force the key")
+
+choice = input("Choose 1 or 2: ")
+
+# Open the encrypted file
+with open("ciphertext.bin", "rb") as file:
+    ciphertext = file.read()
+
+
+# Option 1: normal decryption using the correct key
+if choice == "1":
+
+    key_hex = input("Paste the AES key from encrypt.py: ")
+
+    key = bytes.fromhex(key_hex)
+
+    cipher = AES.new(key, AES.MODE_ECB)
+
+    decrypted_padded = cipher.decrypt(ciphertext)
+
+    decrypted = unpad(decrypted_padded, AES.block_size)
+
+    print()
+    print("Decrypted message:", decrypted.decode())
+
+
+# Option 2: brute-force the unknown bits
+elif choice == "2":
+
+    bits = int(input("How many bits should be guessed? "))
+
+    total_keys = 1 << bits
+
+    expected_message = pad(PLAINTEXT, AES.block_size)
+
+    print()
+    print("Testing", total_keys, "possible keys...")
+
+    start_time = time.perf_counter()
+
+    found_key = None
+
+    for guess in range(total_keys):
+
+        key = guess.to_bytes(16, byteorder="big")
+
+        cipher = AES.new(key, AES.MODE_ECB)
+
+        decrypted = cipher.decrypt(ciphertext)
+
+        if decrypted == expected_message:
+            found_key = key
+            break
+
+    end_time = time.perf_counter()
+
+    elapsed_time = end_time - start_time
+
+    guesses_per_second = total_keys / elapsed_time
+
+    print()
+    print("Correct key found!")
+    print("Key:", found_key.hex())
+    print("Bits tested:", bits)
+    print("Possible keys:", total_keys)
+    print("Time:", elapsed_time, "seconds")
+    print("Keys per second:", guesses_per_second)
+
+    # Save the result
+    with open("results.txt", "a") as file:
+        file.write(
+            f"{bits} bits = {elapsed_time:.6f} seconds, "
+            f"{total_keys} keys, "
+            f"{guesses_per_second:.2f} keys/second\n"
+        )
+
+else:
+    print("Invalid choice.")
+```
+
+# What goes into the decryption program
+
+At the top:
+
+```python
+from Cryptodome.Cipher import AES
+from Cryptodome.Util.Padding import pad, unpad
+import time
+```
+
+we again import AES.
+
+`unpad` removes the padding after normal decryption.
+
+`time` is used to measure how long the brute-force test takes.
+
+Timing the search is one of the main requirements of the assignment.
+
+---
+
+Then we give the user two choices:
+
+```python
+print("1 - Decrypt using a known key")
+print("2 - Brute-force the key")
+```
+
+Option 1 is there because the assignment says to first make sure encryption and decryption work when the correct key is supplied.
+
+Option 2 performs the actual experiment.
+
+---
+
+This:
+
+```python
+with open("ciphertext.bin", "rb") as file:
+    ciphertext = file.read()
+```
+
+opens the encrypted file created by `encrypt.py`.
+
+So the programs work together:
+
+```text
+encrypt.py
+    ↓
+ciphertext.bin
+    ↓
+decrypt.py
+```
+
+---
+
+## Option 1 — Known-key decryption
+
+This:
+
+```python
+key_hex = input("Paste the AES key from encrypt.py: ")
+```
+
+asks for the key printed by the encryption program.
+
+Then:
+
+```python
+key = bytes.fromhex(key_hex)
+```
+
+turns the displayed hexadecimal key back into bytes.
+
+Then:
+
+```python
+cipher = AES.new(key, AES.MODE_ECB)
+```
+
+creates AES using that key.
+
+And:
+
+```python
+decrypted_padded = cipher.decrypt(ciphertext)
+```
+
+decrypts the encrypted data.
+
+Finally:
+
+```python
+decrypted = unpad(decrypted_padded, AES.block_size)
+```
+
+removes the extra padding.
+
+If everything works, we should see:
+
+```text
+Decrypted message: CS468 homework test message
+```
+
+That proves normal encryption and decryption work.
+
+---
+
+# Option 2 — Brute force
+
+This:
+
+```python
+bits = int(input("How many bits should be guessed? "))
+```
+
+lets us enter:
+
+```text
+10
+15
+20
+25
+```
+
+---
+
+This:
+
+```python
+total_keys = 1 << bits
+```
+
+calculates how many possible keys must be tested.
+
+For example:
+
+```text
+10 bits:
+
+2^10 = 1,024 keys
+```
+
+```text
+15 bits:
+
+2^15 = 32,768 keys
+```
+
+```text
+20 bits:
+
+2^20 = 1,048,576 keys
+```
+
+```text
+25 bits:
+
+2^25 = 33,554,432 keys
+```
+
+---
+
+This:
+
+```python
+start_time = time.perf_counter()
+```
+
+starts the timer immediately before the brute-force search.
+
+---
+
+The main brute-force loop is:
+
+```python
+for guess in range(total_keys):
+```
+
+This means Python starts at:
+
+```text
+0
+```
+
+and continues until it has tried every possible value.
+
+For 10 bits, it effectively tests:
+
+```text
+0000000000
+0000000001
+0000000010
+...
+1111111111
+```
+
+which is exactly the type of exhaustive search the assignment asks for.
+
+---
+
+For every guess:
+
+```python
+key = guess.to_bytes(16, byteorder="big")
+```
+
+turns the guessed number into an AES-128 key.
+
+Then:
+
+```python
+cipher = AES.new(key, AES.MODE_ECB)
+```
+
+creates AES with that guessed key.
+
+Then:
+
+```python
+decrypted = cipher.decrypt(ciphertext)
+```
+
+tries decrypting the message.
+
+---
+
+This:
+
+```python
+if decrypted == expected_message:
+```
+
+checks whether the result matches our original plaintext.
+
+If it does:
+
+```python
+found_key = key
+break
+```
+
+the correct key has been found and the loop stops.
+
+Because the encryption program sets all variable bits to `1`, the correct key is the last possible value, so the program must test the entire key range.
+
+---
+
+Afterward:
+
+```python
+end_time = time.perf_counter()
+```
+
+stops the timer.
+
+Then:
+
+```python
+elapsed_time = end_time - start_time
+```
+
+calculates how long the test took.
+
+---
+
+This:
+
+```python
+guesses_per_second = total_keys / elapsed_time
+```
+
+calculates how fast the computer tested keys.
+
+For example, one of the actual tests could produce something like:
+
+```text
+Possible keys: 1048576
+Time: 7.018182 seconds
+Keys per second: 149408.49
+```
+
+---
+
+Finally:
+
+```python
+with open("results.txt", "a") as file:
+```
+
+saves each result into `results.txt`.
+
+For example:
+
+```text
+10 bits = 0.008626 seconds, 1024 keys, 118708.12 keys/second
+15 bits = 0.220400 seconds, 32768 keys, 148674.80 keys/second
+20 bits = 7.018182 seconds, 1048576 keys, 149408.49 keys/second
+25 bits = 239.472025 seconds, 33554432 keys, 140118.38 keys/second
+```
+
+That makes it easy to keep the testing results required for submission. The assignment specifically asks for results such as `10 bits = X seconds, 15 bits = Y seconds, …`.
+
+## Overall structure
+
+The two programs are intentionally simple:
+
+```text
+ENCRYPT.PY
+
+Choose bits
+     ↓
+Create 128-bit key
+     ↓
+Variable bits = all 1s
+     ↓
+Encrypt plaintext
+     ↓
+Save ciphertext.bin
+```
+
+and:
+
+```text
+DECRYPT.PY
+
+Read ciphertext.bin
+        ↓
+Choose mode
+   ↙           ↘
+Known key     Brute force
+   ↓               ↓
+Decrypt       Try every key
+   ↓               ↓
+Show text     Compare plaintext
+                   ↓
+              Measure time
+                   ↓
+             Save results.txt
+```
